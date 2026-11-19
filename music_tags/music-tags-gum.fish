@@ -36,79 +36,38 @@ function pick_and_run --description 'Pick an mp3 directory and run a command on 
     set -l dir (pick_dir "$argv[1]" "$argv[2]")
     or exit 1
 
-    $argv[3..-1] "$dir"
+    # $dir must not be empty string
+    test -n "$dir"; and test -d "$dir"; or exit 1
+
+    # check if directory contains mp3 files
+    if count "$dir"/*.mp3 >/dev/null
+        # argv[3..-1] is the command with arguments
+        for f in "$dir"/*.mp3
+            $argv[3..-1] "$f"
+        end
+    else
+        echo "No mp3 files in directory: $dir" >&2
+        exit 1
+    end
 end
 
-argparse --max-args=0 h/help s/show r/remove-tags i/remove-images -- $argv
-or begin
-    print_help
-    exit 1
-end
+argparse --max-args=0 --exclusive h,show,remove-images,remove-tags \
+    h/help s/show i/remove-images r/remove-tags -- $argv
+or exit 1
 
 if set -q _flag_h
     print_help
     exit 0
-end
-
-# arg1 home/tom arg2 header arg3 
-
-if set -q _flag_show
-    set -l dir (pick_dir /home/tom "Choose Directory of MP3s to Show Tags")
-    or exit 1
-
-    # $dir must not be empty string
-    test -n "$dir"; and test -d "$dir"; or exit 1
-
-    # check if directory contains mp3 files
-    if count "$dir"/*.mp3 >/dev/null
-        for f in "$dir"/*.mp3
-            eyeD3 "$f"
-        end
-    else
-        echo "No mp3 files in directory: $dir" >&2
-        exit 1
-    end
-
-    exit 0
-end
-
-if set -q _flag_remove_images
-    set -l dir (pick_dir /home/tom "Choose Directory of MP3s to Remove Image Tags")
-    or exit 1
-
-    # $dir must not be empty string
-    test -n "$dir"; and test -d "$dir"; or exit 1
-
-    # check if directory contains mp3 files
-    if count "$dir"/*.mp3 >/dev/null
-        for f in "$dir"/*.mp3
-            eyeD3 --remove-all-images -- "$f"
-        end
-    else
-        echo "No mp3 files in directory: $dir" >&2
-        exit 1
-    end
-
-    exit 0
-end
-
-if set -q _flag_remove_tags
-    set -l dir (pick_dir /home/tom "Choose Directory of MP3s to Remove All Tags")
-    or exit 1
-
-    test -n "$dir"; and test -d "$dir"; or exit 1
-
-    # check if directory contains mp3 files
-    if count "$dir"/*.mp3 >/dev/null
-        for f in "$dir"/*.mp3
-            eyeD3 --remove-all -- "$f"
-        end
-    else
-        echo "No mp3 files in directory: $dir" >&2
-        exit 1
-    end
-
-    exit 0
+else if set -q _flag_show
+    pick_and_run /home/tom "Pick Directory of MP3s to Show Tags" eyeD3
+    # exit 0 hides any failures
+    exit
+else if set -q _flag_remove_images
+    pick_and_run /home/tom "Pick Directory of MP3s to Remove Image Tags" eyeD3 --remove-all-images --
+    exit
+else if set -q _flag_remove_tags
+    pick_and_run /home/tom "Choose Directory of MP3s to Remove All Tags" eyeD3 --remove-all --
+    exit
 end
 
 ##### CHOOSE DIRECTORY OF MP3s #####
