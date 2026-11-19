@@ -89,4 +89,24 @@ music-tags --remove-images=~/Music/some_artist/some_album
 music-tags --remove-images /home/some_user/Music/some_artist/some_album/
 music-tags --remove-images="/home/some_user/Music/some_artist/some_album/"
 ```
+---
 
+# Music tags gum
+
+## Dependencies
+
+- `gum` as an interactive dialog utility (`sudo pacman -S gum`)
+- `fzf` along with `fd` for picking files and directories
+
+## Options
+
+- options are mutually exclusive
+- `-h` or `--help`
+- `-s` or `--show`: show music tags of all mp3 files in a selected directory
+- `-i` or `--remove-images`: remove all images from all mp3 files in a selected directory
+- `-r` or `--remove-tags`: remove all tags from all mp3 files in a selected directory
+
+## Adding metadata
+
+- simply run `music-tags-gum` or `music-tags` (I have a symlink on PATH named `music-tags`)
+- you don't need to supply a path as an argument

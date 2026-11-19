@@ -1,14 +1,17 @@
 #!/usr/bin/env fish
 
 function print_help
+    echo "---"
     echo "Command: music-tags"
     echo "Depends on eyeD3; install via pipx."
     echo "Without arguments runs the interactive script."
+    echo "Adds music tags to MP3s in a directory."
+    echo "MP3 file names must begin with 01.. 02.. 03..."
     echo
     echo "-h/--help: Prints this help."
-    echo "-r/--remove-tags: Removes all tags."
-    echo "-i/--remove-images: Removes all images."
-    echo "-s/--show: Shows all tags."
+    echo "-r/--remove-tags: Removes all tags from MP3s in a directory."
+    echo "-i/--remove-images: Removes all images from MP3s in a directory."
+    echo "-s/--show: Shows all music tags of a directory of MP3s."
 end
 
 # `pick_dir` without arguments starts fd in the current directory
@@ -53,7 +56,10 @@ end
 
 argparse --max-args=0 --exclusive h,show,remove-images,remove-tags \
     h/help s/show i/remove-images r/remove-tags -- $argv
-or exit 1
+or begin
+    print_help
+    exit 1
+end
 
 if set -q _flag_h
     print_help
@@ -66,12 +72,12 @@ else if set -q _flag_remove_images
     pick_and_run /home/tom "Pick Directory of MP3s to Remove Image Tags" eyeD3 --remove-all-images --
     exit
 else if set -q _flag_remove_tags
-    pick_and_run /home/tom "Choose Directory of MP3s to Remove All Tags" eyeD3 --remove-all --
+    pick_and_run /home/tom "Pick Directory of MP3s to Remove All Tags" eyeD3 --remove-all --
     exit
 end
 
 ##### CHOOSE DIRECTORY OF MP3s #####
-set -l music_dir (pick_dir /home/tom "Choose Directory of MP3s to Add Tags")
+set -l music_dir (pick_dir /home/tom "Pick Directory of MP3s to Add Tags")
 or exit 1
 
 test -n "$music_dir"; and test -d "$music_dir"; or exit 1
@@ -87,8 +93,8 @@ end
 set -l release_year
 set -l release_year_args
 while true
-    set release_year (gum input --prompt="Release Year: " --placeholder="2026" --prompt.foreground="115")
-    or exit 1 # if read aborted with ctrl c or ctrl d
+    set release_year (gum input --prompt="Release Year: " --placeholder="Press enter to skip..." --prompt.foreground="115")
+    or exit 1
 
     if test -z "$release_year"
         break
@@ -105,7 +111,7 @@ end
 set -l album_name
 set -l album_name_args
 while true
-    set album_name (gum input --prompt="Album Name: " --placeholder="Album name..." --prompt.foreground="115")
+    set album_name (gum input --prompt="Album Name: " --placeholder="Press enter to skip..." --prompt.foreground="115")
     or exit 1
 
     if test -z "$album_name"
@@ -123,7 +129,7 @@ set -l album_artist
 set -l album_artist_args
 set -l artist_args
 while true
-    set album_artist (gum input --prompt="Album Artist: " --placeholder="Artist name..." --prompt.foreground="115")
+    set album_artist (gum input --prompt="Album Artist: " --placeholder="Press enter to skip..." --prompt.foreground="115")
     or exit 1
 
     if test -z "$album_artist"
@@ -142,7 +148,7 @@ set -l genre
 set -l genre_args
 
 while true
-    set genre (gum input --prompt="Genre: " --placeholder="Cool genre name..." --prompt.foreground="115")
+    set genre (gum input --prompt="Genre: " --placeholder="Press enter to skip..." --prompt.foreground="115")
     or exit 1
 
     if test -z "$genre"
