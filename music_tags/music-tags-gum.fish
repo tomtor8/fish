@@ -18,6 +18,26 @@ function print_help
     echo "music-tags -i ~/Music/artist/album"
 end
 
+# `pick_dir` without arguments starts fd in the current directory
+# `pick_dir ~/some/path` starts fd in the mentioned directory
+# the second argument is a header
+function pick_dir --description 'Fuzzy-find a directory and print its full path'
+    set -l root .
+    set -q argv[1]; and set root $argv[1]
+
+    fd --type d --absolute-path . $root \
+        | fzf --height 40% --reverse --header="$argv[2]"
+end
+
+function pick_file --description 'Fuzzy-find an image file and print its full path'
+    set -l root .
+    set -q argv[1]; and set root $argv[1]
+
+    # with-nth shows only the last three parts of the path but accepts the whole path
+    fd --type f --extension png --extension jpeg --extension jpg --absolute-path . $root \
+        | fzf --height 40% --reverse --header="$argv[2]" --delimiter / --with-nth -3..-1
+end
+
 argparse --max-args=0 h/help r/remove-tags i/remove-images -- $argv
 or begin
     print_help
@@ -30,13 +50,10 @@ if set -q _flag_h
 end
 
 if set -q _flag_remove_images
-    set -l dir (gum file --header="Choose a Music Directory" --height 15 --header.foreground=212 --directory $HOME)
-    or begin
-        echo "Aborting..."
-        exit 1
-    end
+    set -l dir (pick_dir /home/tom "Choose Directory of MP3s to Remove Image Tags")
+    or exit 1
 
-    # $dir must not be empty
+    # $dir must not be empty string
     test -n "$dir"; and test -d "$dir"; or exit 1
 
     # check if directory contains mp3 files
@@ -53,42 +70,44 @@ if set -q _flag_remove_images
 end
 
 if set -q _flag_remove_tags
-    set -l dir (string replace -r -- '^~(?=/|$)' "$HOME" "$_flag_remove_tags")
-    set dir (string trim "$dir")
+    set -l dir (pick_dir /home/tom "Choose Directory of MP3s to Remove All Tags")
+    or exit 1
 
-    if not test -d "$dir"
-        echo "Not a valid directory: $dir" >&2
+    test -n "$dir"; and test -d "$dir"; or exit 1
+
+    # check if directory contains mp3 files
+    if count "$dir"/*.mp3 >/dev/null
+        for f in "$dir"/*.mp3
+            eyeD3 --remove-all -- "$f"
+        end
+    else
+        echo "No mp3 files in directory: $dir" >&2
         exit 1
     end
 
-    for f in $dir/*.mp3
-        eyeD3 --remove-all -- "$f"
-    end
     exit 0
 end
 
-set -l music_dir
-while true
-    # can use ~ instead of /home/tom
-    read --shell --prompt-str="Music Directory Path: " music_dir
-    or exit 1 # if read aborted with ctrl c or ctrl d
-    # replace tilde with $HOME
-    set music_dir (string trim "$music_dir")
-    set music_dir (string replace -r -- '^~(?=/|$)' "$HOME" "$music_dir")
-    # remove trailing / in dir path
-    set music_dir (string replace -r -- '/$' '' "$music_dir")
-    if test -d "$music_dir"
-        break
-    else
-        echo "The music directory path is not valid. Try again!" >&2
-    end
+##### CHOOSE DIRECTORY OF MP3s #####
+set -l music_dir (pick_dir /home/tom "Choose Directory of MP3s to Add Tags")
+or exit 1
+
+test -n "$music_dir"; and test -d "$music_dir"; or exit 1
+
+# check if directory contains mp3 files
+count "$music_dir"/*.mp3 >/dev/null
+or begin
+    echo "No mp3 files in directory: $dir" >&2
+    exit 1
 end
 
+##### SET RELEASE YEAR #####
 set -l release_year
 set -l release_year_args
 while true
-    read --prompt-str="Release Year (Enter to skip): " release_year
+    set release_year (gum input --prompt="Release Year: " --placeholder="2026")
     or exit 1 # if read aborted with ctrl c or ctrl d
+
     if test -z "$release_year"
         break
     end
@@ -100,11 +119,13 @@ while true
     end
 end
 
+##### SET ALBUM NAME #####
 set -l album_name
 set -l album_name_args
 while true
-    read --prompt-str="Album Name (Enter to skip): " album_name
-    or exit 1 # if read aborted with ctrl c or ctrl d
+    set album_name (gum input --prompt="Album Name: " --placeholder="Album name...")
+    or exit 1
+
     if test -z "$album_name"
         break
     end
@@ -120,8 +141,9 @@ set -l album_artist
 set -l album_artist_args
 set -l artist_args
 while true
-    read --prompt-str="Album Artist Name (Enter to skip): " album_artist
-    or exit 1 # if read aborted with ctrl c or ctrl d
+    set album_artist (gum input --prompt="Album Artist: " --placeholder="Artist name...")
+    or exit 1
+
     if test -z "$album_artist"
         break
     end
@@ -138,8 +160,9 @@ set -l genre
 set -l genre_args
 
 while true
-    read --prompt-str="Genre (Enter to skip): " genre
-    or exit 1 # if read aborted with ctrl c or ctrl d
+    set genre (gum input --prompt="Genre: " --placeholder="Cool genre name...")
+    or exit 1
+
     if test -z "$genre"
         break
     end
@@ -154,33 +177,30 @@ end
 set -l cover_path
 set -l image_args
 
-while true
-    read --shell --prompt-str="Cover image path (Enter to skip): " cover_path
-    or exit 1
-    # if empty break
-    if test -z "$cover_path"
-        break
-    end
-    # replace tilde with $HOME
-    set cover_path (string replace -r -- '^~(?=/|$)' "$HOME" "$cover_path")
-    if test -f "$cover_path"
-        # get mime type of file, eg, image/jpeg using file command
-        set -l mime (file --brief --mime-type -- "$cover_path")
-        if contains -- $mime image/jpeg image/png
-            set image_args --add-image "$cover_path:FRONT_COVER:cover"
-            break
+if gum confirm "Do you want to set a front cover image?"
+    while true
+        set cover_path (pick_file /home/tom "Choose a Front Cover (jpeg, jpg, png)")
+        or break
+
+        if test -f "$cover_path"
+            # get mime type of file, eg, image/jpeg using file command
+            set -l mime (file --brief --mime-type -- "$cover_path")
+            if contains -- $mime image/jpeg image/png
+                set image_args --add-image "$cover_path:FRONT_COVER:cover"
+                break
+            else
+                echo "Cover must be a JPEG or PNG (got: $mime)" >&2
+                continue
+            end
         else
-            echo "Cover must be a JPEG or PNG (got: $mime)" >&2
-            continue
+            echo "The cover path is not valid. Try again!" >&2
         end
-    else
-        echo "The cover path is not valid. Try again!" >&2
     end
 end
 
-set -l num_of_tracks (count $music_dir/*.mp3)
+set -l num_of_tracks (count "$music_dir"/*.mp3)
 
-for f in $music_dir/*.mp3
+for f in "$music_dir"/*.mp3
     echo "Processing: $f"
     set -l clean_name (basename --suffix=".mp3" "$f")
     set -l title (string match -rg '^\d+\s*[-_]?\s*(.*)$' -- "$clean_name")
