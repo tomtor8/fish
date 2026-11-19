@@ -6,16 +6,9 @@ function print_help
     echo "Without arguments runs the interactive script."
     echo
     echo "-h/--help: Prints this help."
-    echo
-    echo "-r/--remove-tags <full dir path>: Removes all tags."
-    echo "music-tags --remove-tags=~/Music/artist/album"
-    echo "music-tags --remove-tags=/home/tom/Music/artist/album/"
-    echo "music-tags -r ~/Music/artist/album"
-    echo
-    echo "-i/--remove-images <full dir path>: Removes all images."
-    echo "music-tags --remove-images ~/Music/artist/album"
-    echo "music-tags --remove-images /home/tom/Music/artist/album/"
-    echo "music-tags -i ~/Music/artist/album"
+    echo "-r/--remove-tags: Removes all tags."
+    echo "-i/--remove-images: Removes all images."
+    echo "-s/--show: Shows all tags."
 end
 
 # `pick_dir` without arguments starts fd in the current directory
@@ -38,7 +31,15 @@ function pick_file --description 'Fuzzy-find an image file and print its full pa
         | fzf --height 40% --reverse --header="$argv[2]" --delimiter / --with-nth -3..-1
 end
 
-argparse --max-args=0 h/help r/remove-tags i/remove-images -- $argv
+# first arg is target path, second arg is header, third to last is command to run
+function pick_and_run --description 'Pick an mp3 directory and run a command on it'
+    set -l dir (pick_dir "$argv[1]" "$argv[2]")
+    or exit 1
+
+    $argv[3..-1] "$dir"
+end
+
+argparse --max-args=0 h/help s/show r/remove-tags i/remove-images -- $argv
 or begin
     print_help
     exit 1
@@ -46,6 +47,28 @@ end
 
 if set -q _flag_h
     print_help
+    exit 0
+end
+
+# arg1 home/tom arg2 header arg3 
+
+if set -q _flag_show
+    set -l dir (pick_dir /home/tom "Choose Directory of MP3s to Show Tags")
+    or exit 1
+
+    # $dir must not be empty string
+    test -n "$dir"; and test -d "$dir"; or exit 1
+
+    # check if directory contains mp3 files
+    if count "$dir"/*.mp3 >/dev/null
+        for f in "$dir"/*.mp3
+            eyeD3 "$f"
+        end
+    else
+        echo "No mp3 files in directory: $dir" >&2
+        exit 1
+    end
+
     exit 0
 end
 
@@ -105,7 +128,7 @@ end
 set -l release_year
 set -l release_year_args
 while true
-    set release_year (gum input --prompt="Release Year: " --placeholder="2026")
+    set release_year (gum input --prompt="Release Year: " --placeholder="2026" --prompt.foreground="115")
     or exit 1 # if read aborted with ctrl c or ctrl d
 
     if test -z "$release_year"
@@ -123,7 +146,7 @@ end
 set -l album_name
 set -l album_name_args
 while true
-    set album_name (gum input --prompt="Album Name: " --placeholder="Album name...")
+    set album_name (gum input --prompt="Album Name: " --placeholder="Album name..." --prompt.foreground="115")
     or exit 1
 
     if test -z "$album_name"
@@ -141,7 +164,7 @@ set -l album_artist
 set -l album_artist_args
 set -l artist_args
 while true
-    set album_artist (gum input --prompt="Album Artist: " --placeholder="Artist name...")
+    set album_artist (gum input --prompt="Album Artist: " --placeholder="Artist name..." --prompt.foreground="115")
     or exit 1
 
     if test -z "$album_artist"
@@ -160,7 +183,7 @@ set -l genre
 set -l genre_args
 
 while true
-    set genre (gum input --prompt="Genre: " --placeholder="Cool genre name...")
+    set genre (gum input --prompt="Genre: " --placeholder="Cool genre name..." --prompt.foreground="115")
     or exit 1
 
     if test -z "$genre"
@@ -177,7 +200,7 @@ end
 set -l cover_path
 set -l image_args
 
-if gum confirm "Do you want to set a front cover image?"
+if gum confirm "Do you want to set a front cover image?" --selected.background="150" --selected.foreground="0" --prompt.foreground="115"
     while true
         set cover_path (pick_file /home/tom "Choose a Front Cover (jpeg, jpg, png)")
         or break
