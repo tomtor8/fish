@@ -21,7 +21,7 @@ for file in $argv
             continue
     end
 
-    or notify-send "Failed compression: $file" >&2
+    or notify-send -i dialog-error "Error" "Failed compression: $file" >&2
 end
 
-notify-send "Image compression finished."
+notify-send -i dialog-information "Info" "Image compression finished."
