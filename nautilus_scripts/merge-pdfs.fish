@@ -57,8 +57,9 @@ end
 set -l gs_err (gs -dQUIET -dBATCH -dNOPAUSE -sDEVICE=pdfwrite -sOutputFile="$target" $pdf_files 2>&1 >/dev/null)
 or begin
     begin
-        echo "[$(date '+%Y-%m-%d %H:%M:%S')] gs merge failed:"
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] Ghostscript merge failed:"
         printf '  %s\n' $gs_err
+        echo
     end >>~/.cache/fish-script-errors.txt
     notify-send -i dialog-error Error "Ghostscript merging PDFs failed."\n"Check ~/.cache/fish-script-errors.txt for more details."
     exit 1

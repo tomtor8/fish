@@ -74,10 +74,15 @@ if test -e "$target"
     end
 end
 
-img2pdf $image_files --output "$target" $pagesize_args \
-    --border "$top_bottom_border"cm:"$left_right_border"cm
+set -l img_err (img2pdf $image_files --output "$target" $pagesize_args \
+    --border "$top_bottom_border"cm:"$left_right_border"cm 2>&1 >/dev/null)
 or begin
-    notify-send -i dialog-error Error "Failed conversion of images to PDF."
+    begin
+        echo "[$(date '+%Y-%m-%d %H:%M:%S')] img2pdf conversion failed:"
+        printf '  %s\n' $img_err
+        echo
+    end >>~/.cache/fish-script-errors.txt
+    notify-send -i dialog-error Error "Failed conversion of images to PDF."\n"Check ~/.cache/fish-script-errors.txt for more details."
     exit 1
 end
 
