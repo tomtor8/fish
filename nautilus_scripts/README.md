@@ -1,10 +1,17 @@
-# Scripts for Nautilus
+# Scripts for Nautilus and Strata file managers
 
 - in `~/.local/share/nautilus/scripts/`create your custom scripts (bash, fish, lua...)
 - make the scripts executable and they will show up in the context menu in Nautilus on file selection
 - you can select multiple files or directories
 - all selected items are passed into a script (in case of Fish as `$argv`)
 - use for loops to process them
+
+> [!NOTE]
+> Nautilus passes only relative paths to scripts as `$argv`. Strata passes full paths to scripts as `$argv`!
+
+- as for the Strata file manager, scripts are lauched via `actions` in the right mouse click menu
+- add scripts to Actions>Script>Command as a full path command, e.g. `/home/$USER/Projects/fish/nautilus_scripts/compress-images.fish`
+- in the Arguments window type `{paths}`
 
 ## Compress images script
 
@@ -56,3 +63,13 @@ Pages follow the order in which Nautilus passes the files to the script.
 
 - PNGs with transparency are supported (stored as a soft mask).
 - JPEGs are embedded without re-encoding; PNGs are recompressed losslessly.
+
+## Change file names
+
+### Features
+
+- renames files, not directories
+- substitutes spaces and underscores with dashes `-`
+- makes filenames lowercase
+- if there is already a file with the same name as the renamed file, the script skips renaming this file
+- skipped file names are written in `~/.cache/fish-script-errors.txt` along with a timestamp

@@ -9,6 +9,7 @@ set -l selected_files (path filter --type file -- $argv)
 set selected_files (path resolve -- $selected_files)
 
 set -l counter 0
+set -l skipped_counter 0
 
 for file in $selected_files
     set -l base_name (path basename -- "$file")
@@ -20,9 +21,29 @@ for file in $selected_files
     set renamed_base (string replace -r -a -- '-{2,}' '-' "$renamed_base")
 
     if test "$renamed_base" != "$base_name"
-        mv "$file" "$dir_name"/"$renamed_base"
+        set -l new_file_name "$dir_name"/"$renamed_base"
+        if test -e "$new_file_name"
+            set skipped_counter (math $skipped_counter + 1)
+            begin
+                echo "[$(date '+%Y-%m-%d %H:%M:%S')] file renaming failed:"
+                echo "$file"
+                echo
+            end >>~/.cache/fish-script-errors.txt
+            continue
+        end
+        mv "$file" "$new_file_name"
         set counter (math $counter + 1)
     end
 end
 
-notify-send -i dialog-information Info "Number of changed file names: $counter"
+set -l notify_args
+test $skipped_counter -gt 0
+and set notify_args -u critical -t 10000
+
+# final notification
+set -l changed "Number of changed file names: $counter"
+set -l skipped "Number of skipped files: $skipped_counter"
+set -l errors "Check ~/.cache/fish-script-errors.txt"
+
+notify-send $notify_args -i dialog-information Info \
+    "$changed"\n"$skipped"\n"$errors"
